@@ -38,7 +38,8 @@ impl Cpu {
         let real_op = ((instruction >> 2) & 0b1111) as u8;
         match real_op {
             0b0000 => Instruction32::Immediate {
-                imm: ((instruction >> 16) & 0b1111111111111111) as u16,
+                imm: ((instruction >> 20) & 0b111111111111) as u16,
+                f4: ((instruction >> 16) & 0b1111) as u8,
                 rs1: ((instruction >> 11) & 0b11111) as RegisterIdx,
                 rd: ((instruction >> 6) & 0b11111) as RegisterIdx,
                 op: (instruction & 0b111111) as u8,
@@ -63,7 +64,13 @@ impl Cpu {
 
     fn execute32(&mut self, instruction: Instruction32) {
         match instruction {
-            Instruction32::Immediate { imm, rs1, rd, op } => self.execute32i(imm, rs1, rd, op),
+            Instruction32::Immediate {
+                imm,
+                f4,
+                rs1,
+                rd,
+                op,
+            } => self.execute32i(imm, f4, rs1, rd, op),
             Instruction32::Register {
                 f7,
                 f3,
@@ -76,7 +83,7 @@ impl Cpu {
         self.pc += 4;
     }
 
-    fn execute32i(&mut self, imm: u16, rs1: RegisterIdx, rd: RegisterIdx, op: Opcode32) {
+    fn execute32i(&mut self, imm: u16, f4: u8, rs1: RegisterIdx, rd: RegisterIdx, op: Opcode32) {
         match op {
             0b000011 => {
                 self.regs.write(rd, self.regs.read(rs1) + (imm as u32));
@@ -119,7 +126,8 @@ enum Instruction32 {
         op: Opcode32,     // [05..00]
     },
     Immediate {
-        imm: u16,         // [31..16]
+        imm: u16,         // [31..20]
+        f4: u8,           // [19..16]
         rs1: RegisterIdx, // [15..11]
         rd: RegisterIdx,  // [10..06]
         op: Opcode32,     // [05..00]
@@ -158,9 +166,9 @@ mod tests {
     use super::*;
 
     #[test]
-    fn halt() {
+    fn hlt() {
         let mut cpu = Cpu::new();
-        let mut memory = Memory::new(1024);
+        let mut memory = Memory::new(64);
         memory.write_at(
             0,
             &bytemuck::cast_slice(&[0b00000000_000_00000_00000_00000_000111]),
@@ -170,6 +178,23 @@ mod tests {
         let mut expected = Cpu::new();
         expected.pc = 4;
         expected.halt = true;
+
+        assert_eq!(cpu, expected);
+    }
+
+    #[test]
+    fn addi() {
+        let mut cpu = Cpu::new();
+        let mut memory = Memory::new(64);
+        memory.write_at(
+            0,
+            &bytemuck::cast_slice(&[0b000000101010_0000_00000_00010_000011]),
+        );
+        cpu.tick(&memory);
+
+        let mut expected = Cpu::new();
+        expected.pc = 4;
+        expected.regs.write(2, 42);
 
         assert_eq!(cpu, expected);
     }
