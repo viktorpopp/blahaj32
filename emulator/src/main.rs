@@ -4,7 +4,7 @@ mod cpu;
 mod memory;
 
 const PROGRAM: [u32; 1] = [
-    // addi r1, r0, 42
+    // addi r2, r0, 42
     // imm              rs    rd    op
     0b0000000000101010_00000_00010_000011,
 ];
