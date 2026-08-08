@@ -70,10 +70,10 @@ enum Instruction {
 #[derive(Debug)]
 enum Instruction32 {
     Immediate {
-        imm: u16,
-        rs: Register,
-        rd: Register,
-        op: Opcode32,
+        imm: u16,     // [31..16]
+        rs: Register, // [15..11]
+        rd: Register, // [10..06]
+        op: Opcode32, // [05..00]
     },
 }
 
