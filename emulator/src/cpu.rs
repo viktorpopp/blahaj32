@@ -2,7 +2,7 @@ use std::{thread::sleep, time::Duration};
 
 use crate::memory::Memory;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct Cpu {
     halt: bool,
     pc: u32,
@@ -130,7 +130,7 @@ type RegisterIdx = u8;
 
 type Opcode32 = u8;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 struct RegisterFile {
     inner: [u32; 32],
 }
@@ -150,5 +150,27 @@ impl RegisterFile {
             return;
         }
         self.inner[idx] = val;
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn halt() {
+        let mut cpu = Cpu::new();
+        let mut memory = Memory::new(1024);
+        memory.write_at(
+            0,
+            &bytemuck::cast_slice(&[0b00000000_000_00000_00000_00000_000111]),
+        );
+        cpu.tick(&memory);
+
+        let mut expected = Cpu::new();
+        expected.pc = 4;
+        expected.halt = true;
+
+        assert_eq!(cpu, expected);
     }
 }
