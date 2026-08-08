@@ -197,6 +197,7 @@ mod tests {
             &bytemuck::cast_slice(&[0b00000000_000_00000_00000_00000_000111]),
         );
         cpu.tick(&memory);
+        cpu.tick(&memory);
 
         let mut expected = Cpu::new();
         expected.pc = 4;
@@ -254,5 +255,17 @@ mod tests {
         expected.pc = 4;
 
         assert_eq!(cpu, expected);
+    }
+
+    #[test]
+    #[should_panic]
+    fn non_32_bit_instruction() {
+        let mut cpu = Cpu::new();
+        let mut memory = Memory::new(64);
+        memory.write_at(
+            0,
+            &bytemuck::cast_slice(&[0b00000000000000000000000000000000]),
+        );
+        cpu.tick(&memory);
     }
 }

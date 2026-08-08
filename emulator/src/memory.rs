@@ -30,3 +30,28 @@ impl Memory {
         u32::from_le_bytes(self.inner[at..end].try_into().unwrap())
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn out_of_bounds_read() {
+        let memory = Memory::new(0);
+        memory.read_u32(8);
+    }
+
+    #[test]
+    fn read_write() {
+        let mut memory = Memory::new(8);
+        let bytes = [42, 67, 68, 69];
+
+        memory.write_at(1, &bytes);
+
+        let val = memory.read_u32(1);
+        let expected = u32::from_le_bytes(bytes);
+
+        assert_eq!(val, expected);
+    }
+}
