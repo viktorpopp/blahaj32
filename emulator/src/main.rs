@@ -3,10 +3,13 @@ use crate::{cpu::Cpu, memory::Memory};
 mod cpu;
 mod memory;
 
-const PROGRAM: [u32; 1] = [
+const PROGRAM: [u32; 2] = [
     // addi r2, r0, 42
-    // imm              rs    rd    op
+    // imm              rs1   rd    op
     0b0000000000101010_00000_00010_000011,
+    // hlt
+    // f7       f3  rs2   rs1   rd    op
+    0b00000000_000_00000_00000_00000_000111,
 ];
 
 struct Emulator {
