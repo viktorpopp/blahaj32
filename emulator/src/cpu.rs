@@ -24,7 +24,7 @@ impl Cpu {
             return;
         }
         self.execute(self.decode(memory.read_u32(self.pc)));
-        println!("{:#?}", self);
+        //println!("{:#?}", self);
     }
 
     fn decode(&self, instruction: u32) -> Instruction {
@@ -52,11 +52,18 @@ impl Cpu {
                 rd: ((instruction >> 6) & 0b11111) as RegisterIdx,
                 op: (instruction & 0b111111) as u8,
             },
+            0b0010 => Instruction32::LargeImmediate {
+                imm: ((instruction >> 12) & 0b11111111111111111111),
+                f1: ((instruction >> 11) & 0b1) != 0,
+                rd: ((instruction >> 6) & 0b11111) as u8,
+                op: (instruction & 0b111111) as u8,
+            },
             _ => todo!(),
         }
     }
 
     fn execute(&mut self, instruction: Instruction) {
+        println!("{:#?}", instruction);
         match instruction {
             Instruction::Bits32(i) => self.execute32(i),
         }
@@ -79,6 +86,7 @@ impl Cpu {
                 rd,
                 op,
             } => self.execute32r(f7, f3, rs2, rs1, rd, op),
+            Instruction32::LargeImmediate { imm, f1, rd, op } => self.execute32l(imm, f1, rd, op),
         }
         self.pc += 4;
     }
@@ -108,6 +116,15 @@ impl Cpu {
             _ => todo!(),
         }
     }
+
+    fn execute32l(&mut self, imm: u32, f1: bool, rd: RegisterIdx, op: Opcode32) {
+        match op {
+            0b001011 => {
+                self.regs.write(rd, imm << if f1 { 0 } else { 12 });
+            }
+            _ => todo!(),
+        }
+    }
 }
 
 #[derive(Debug)]
@@ -131,6 +148,12 @@ enum Instruction32 {
         rs1: RegisterIdx, // [15..11]
         rd: RegisterIdx,  // [10..06]
         op: Opcode32,     // [05..00]
+    },
+    LargeImmediate {
+        imm: u32,        // [31..12]
+        f1: bool,        // [11..11]
+        rd: RegisterIdx, // [10..06]
+        op: Opcode32,    // [05..00]
     },
 }
 
@@ -195,6 +218,40 @@ mod tests {
         let mut expected = Cpu::new();
         expected.pc = 4;
         expected.regs.write(2, 42);
+
+        assert_eq!(cpu, expected);
+    }
+
+    #[test]
+    fn movui() {
+        let mut cpu = Cpu::new();
+        let mut memory = Memory::new(64);
+        memory.write_at(
+            0,
+            &bytemuck::cast_slice(&[0b000000000000000001_0_00010_001011]),
+        );
+        cpu.tick(&memory);
+
+        let mut expected = Cpu::new();
+        expected.regs.write(2, 0b00000000000000000001000000000000);
+        expected.pc = 4;
+
+        assert_eq!(cpu, expected);
+    }
+
+    #[test]
+    fn movi() {
+        let mut cpu = Cpu::new();
+        let mut memory = Memory::new(64);
+        memory.write_at(
+            0,
+            &bytemuck::cast_slice(&[0b000000000000000001_1_00010_001011]),
+        );
+        cpu.tick(&memory);
+
+        let mut expected = Cpu::new();
+        expected.regs.write(2, 0b00000000000000000000000000000001);
+        expected.pc = 4;
 
         assert_eq!(cpu, expected);
     }
