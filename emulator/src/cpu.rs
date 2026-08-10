@@ -268,4 +268,10 @@ mod tests {
         );
         cpu.tick(&memory);
     }
+
+    #[test]
+    fn write_to_r0() {
+        let mut cpu = Cpu::new();
+        cpu.regs.write(0, 42);
+    }
 }
