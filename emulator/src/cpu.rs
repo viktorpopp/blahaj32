@@ -1,6 +1,5 @@
-use std::{thread::sleep, time::Duration};
-
 use crate::memory::Memory;
+use std::{thread::sleep, time::Duration};
 
 #[derive(Debug, PartialEq)]
 pub struct Cpu {
