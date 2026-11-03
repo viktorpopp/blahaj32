@@ -1,16 +1,11 @@
-use crate::{cpu::Cpu, memory::Memory};
+use crate::{cli::Cli, cpu::Cpu, memory::Memory};
+use clap::Parser;
+use color_eyre::eyre::{Result, eyre};
+use std::fs;
 
+mod cli;
 mod cpu;
 mod memory;
-
-const PROGRAM: [u32; 2] = [
-    // addi r2, r0, 42
-    // imm          f4   rs1   rd    op
-    0b000000101010_0000_00000_00010_000011,
-    // hlt
-    // f7       f3  rs2   rs1   rd    op
-    0b00000000_000_00000_00000_00000_000111,
-];
 
 struct Emulator {
     cpu: Cpu,
@@ -21,7 +16,7 @@ impl Emulator {
     pub fn new(config: Config) -> Self {
         Self {
             cpu: Cpu::new(),
-            memory: Memory::new(config.memory_capacity),
+            memory: Memory::new(config.memory_capacity.0),
         }
     }
 
@@ -37,14 +32,62 @@ impl Emulator {
 }
 
 struct Config {
-    memory_capacity: u32,
+    memory_capacity: MemoryCapacity,
 }
 
-fn main() {
-    let config = Config {
-        memory_capacity: 8, // 8 bytes of memory
-    };
+impl TryFrom<Cli> for Config {
+    type Error = String;
+
+    fn try_from(cli: Cli) -> Result<Self, Self::Error> {
+        let memory_capacity = match cli.memory {
+            Some(m) => MemoryCapacity::try_from(m)?,
+            None => MemoryCapacity(64),
+        };
+
+        Ok(Config { memory_capacity })
+    }
+}
+
+pub struct MemoryCapacity(pub u32);
+
+impl TryFrom<String> for MemoryCapacity {
+    type Error = String;
+
+    // TODO: This can be optimized.
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let mut num_count = 0;
+        for c in s.chars() {
+            if c.is_numeric() {
+                num_count += 1;
+                continue;
+            }
+            break;
+        }
+        let num = &s[0..num_count];
+        let num = num.parse::<u32>().map_err(|e| e.to_string())?;
+
+        let unit = s.chars().find(|c| c.is_alphabetic()).unwrap_or('B');
+        let unit_mul = match unit {
+            'B' => 1,
+            'K' => 1024,
+            _ => todo!(),
+        };
+
+        Ok(MemoryCapacity(num * unit_mul))
+    }
+}
+
+fn main() -> Result<()> {
+    color_eyre::install()?;
+
+    let args = Cli::parse();
+    let config = Config::try_from(args.clone()).map_err(|e| eyre!(e))?;
+
+    let program = fs::read(&args.file)?;
+
     let mut emulator = Emulator::new(config);
-    emulator.load_at(0, &bytemuck::cast_slice(&PROGRAM));
+    emulator.load_at(0, bytemuck::cast_slice(&program));
     emulator.run();
+
+    Ok(())
 }

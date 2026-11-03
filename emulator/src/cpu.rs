@@ -62,7 +62,7 @@ impl Cpu {
     }
 
     fn execute(&mut self, instruction: Instruction) {
-        println!("{:#?}", instruction);
+        //println!("{:#?}", instruction);
         match instruction {
             Instruction::Bits32(i) => self.execute32(i),
         }
