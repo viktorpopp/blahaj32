@@ -19,6 +19,7 @@ impl Cpu {
 
     pub fn tick(&mut self, memory: &Memory) {
         if self.halt {
+            #[cfg(debug_assertions)]
             sleep(Duration::from_micros(1));
             return;
         }
